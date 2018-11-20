@@ -1,5 +1,7 @@
 
 #include <SDL.h>
+#include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdio.h>
 #include <iostream>
 #include <sstream>
@@ -22,6 +24,17 @@ bool init()
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) 
 	{
 		std::cout << "SDL could not initialize! SDL_Error: %s\n" << SDL_GetError() << std::endl;
+		success = false;
+	}
+	int imgFlags = IMG_INIT_PNG;
+	if (!(IMG_Init(imgFlags) & imgFlags))
+	{
+		std::cout << "SDL_Image could not initialize! SDL_Image Error: %s\n" << IMG_GetError() << std::endl;
+		success = false;
+	}
+	if (TTF_Init() == -1)
+	{
+		std::cout << "SDL_ttf could not initialize! SDL_ttf Error: %s\n" << TTF_GetError() << std::endl;
 		success = false;
 	}
 
