@@ -3,6 +3,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 #include <stdio.h>
+#include <string.h>
 #include <iostream>
 #include <sstream>
 #include "../include/constants.h"
@@ -13,7 +14,6 @@
 
 //forward declarations
 bool init();
-bool loadMedia(SDL_Surface* media[], int size);
 void close(SDL_Window* window, SDL_Surface* screenSurface);
 
 bool init() 
@@ -41,24 +41,20 @@ bool init()
 	return success;
 }
 
-
-bool loadMedia(SDL_Surface* media[], int size) 
+SDL_Surface* loadSurface(const char* bmp, SDL_Surface* surf)
 {
-	bool success = true;
-
-	int iii = 0;
-	for (iii; iii < size; ++iii)
+	SDL_Surface* image = SDL_LoadBMP(bmp);
+	SDL_Surface* optimizedSurf = SDL_ConvertSurface(image, surf->format, NULL);
+	SDL_FreeSurface(image);
+	
+	if (optimizedSurf == NULL)
 	{
-		if (media[iii] == NULL)
-		{
-			std::cout << "Unable to load image %s! SDL Error: %\n" << SDL_GetError() << std::endl;
-			success = false;
-		}
+		printf("SDL Error loading %s: %s\n", bmp, SDL_GetError());
+		exit(1);
 	}
 
-	return success;
+	return optimizedSurf;
 }
-
 
 void close(SDL_Window* window, SDL_Surface* screenSurface) 
 {
@@ -82,29 +78,17 @@ int main(int argc, char* args[])
 		std::cout << "SDL could not initialize! SDL_Error: %s\n" << SDL_GetError() << std::endl;
 		return 0;
 	}
-
-	SDL_Window* window = NULL;
-	SDL_Surface* screenSurface = NULL;
-	SDL_Surface* backGround = NULL;
-	SDL_Surface* blueRectImage = NULL;
-	SDL_Surface* playerImage = NULL;
-	SDL_Surface* groundImage = NULL;
-	SDL_Renderer* renderer = NULL;
-		
+	
 	//define surface variables
-	window = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-	screenSurface = SDL_GetWindowSurface(window);
+	SDL_Window* window = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Surface* screenSurface = SDL_GetWindowSurface(window);
 	
 	//Load images
-	backGround = SDL_LoadBMP("graphics/testsky.bmp");
-	blueRectImage = SDL_LoadBMP("graphics/bluerect.bmp");
-	playerImage = SDL_LoadBMP("graphics/testplayer.bmp");
-	groundImage = SDL_LoadBMP("graphics/testground.bmp");
-
-	//Put images in array to be sorted through and checked for errors
-	SDL_Surface* media[] = { backGround, blueRectImage, playerImage, groundImage };
-	int mediaSize = std::size(media);
+	SDL_Surface* backGround = loadSurface("graphics/testsky.bmp", screenSurface);
+	SDL_Surface* blueRectImage = loadSurface("graphics/bluerect.bmp", screenSurface);
+	SDL_Surface* playerImage = loadSurface("graphics/testplayer.bmp", screenSurface);
+	SDL_Surface* groundImage = loadSurface("graphics/testground.bmp", screenSurface);
 
 	//instantiate classes
 	Events e;
@@ -121,44 +105,34 @@ int main(int argc, char* args[])
 	//Main flags
 	bool qt = false;
 
-	//Load media
-	if (!loadMedia(media, mediaSize)) 
+	while (!qt) 
 	{
-		std::cout << "Falied to load media!" << std::endl;
-	}
-	else 
-	{
-		//Main game loop
-		while (!qt) 
+		//Events aggregator
+		e.pollEvents();
+		if (e.quit() == true) 
 		{
-			//Events aggregator
-			e.pollEvents();
-			if (e.quit() == true) 
-			{
-				qt = true;
-			}
-
-			//TODO: break most of these processes down into functions so that it
-			//isn't all sitting in main.
-			WorldObject blueRect = blueRect01;
-			//blit the surfaces to the screen
-			SDL_BlitSurface(backGround, NULL, screenSurface, NULL);
-			blueRect01.blitSprite(blueRectImage, screenSurface);
-			blueRect02.blitSprite(blueRectImage, screenSurface);
-			testGround.blitSprite(groundImage, screenSurface);
-
-			//set the location of the surfaces
-			blueRect01.location(0, 150);
-			blueRect02.location(500, 150);
-			testGround.location(0, 350);
-
-			player.blitPlayer(playerImage, screenSurface);
-			player.playerCollision(sprites, spriteSize);
-			player.movePlayer();
-
-			SDL_UpdateWindowSurface(window);
+			qt = true;
 		}
+
+		//TODO: break most of these processes down into functions so that it
+		//isn't all sitting in main.
 			
+		//blit the surfaces to the screen
+		SDL_BlitSurface(backGround, NULL, screenSurface, NULL);
+		blueRect01.blitSprite(blueRectImage, screenSurface);
+		blueRect02.blitSprite(blueRectImage, screenSurface);
+		testGround.blitSprite(groundImage, screenSurface);
+
+		//set the location of the surfaces
+		blueRect01.location(0, 150);
+		blueRect02.location(500, 150);
+		testGround.location(0, 350);
+
+		player.blitPlayer(playerImage, screenSurface);
+		player.playerCollision(sprites, spriteSize);
+		player.movePlayer();
+
+		SDL_UpdateWindowSurface(window);
 	}
 
 	//Free resources and close SDL
